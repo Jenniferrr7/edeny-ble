@@ -15,7 +15,7 @@ input{width:100%;padding:10px;margin:6px 0;border-radius:8px;border:none;backgro
 <input type="range" id="v" min="0" max="255" value="0" style="margin:12px 0">
 <button id="tog" style="background:#555">手动模式</button>
 <script>
-let ch,keepTimer,pollTimer,manual=false,curSpeed=0;
+let ch,keepTimer,pollTimer,manual=false,curSpeed=0,lastSent=-1;
 const L=t=>document.getElementById('status').textContent=t;
 const SPD=v=>document.getElementById('spd').textContent=v;
 const getK=()=>document.getElementById('tok').value.trim();
@@ -33,7 +33,7 @@ async function poll(){
     if(!r.ok)return;
     const d=await r.json();
     const v=typeof d.speed==='number'?d.speed:0;
-    if(v!==curSpeed){curSpeed=v;SPD(v);send(v);L(v>0?'🔮 远程: '+v:'已停止');}
+    if(v!==lastSent){lastSent=v;curSpeed=v;SPD(v);send(v);L(v>0?'🔮 远程: '+v:'已停止');}
   }catch(e){}
 }
 document.getElementById('v').oninput=e=>{curSpeed=+e.target.value;SPD(curSpeed);if(manual)send(curSpeed);};
@@ -41,7 +41,7 @@ document.getElementById('tog').onclick=()=>{
   manual=!manual;
   document.getElementById('tog').style.background=manual?'#c0392b':'#555';
   document.getElementById('tog').textContent=manual?'切回远程':'手动模式';
-  if(!manual){curSpeed=0;SPD(0);send(0);}
+  if(!manual){curSpeed=0;lastSent=-1;SPD(0);send(0);}
 };
 document.getElementById('btn').onclick=async()=>{
   if(!getK()){L('先填 token！');return;}
@@ -51,12 +51,14 @@ document.getElementById('btn').onclick=async()=>{
     const s=await d.gatt.connect();
     const svc=await s.getPrimaryService('0000ffe0-0000-1000-8000-00805f9b34fb');
     ch=await svc.getCharacteristic('0000ffe1-0000-1000-8000-00805f9b34fb');
+    // 连上先停止，等远程指令
+    curSpeed=0;lastSent=0;send(0);SPD(0);
     L('✓ 已连接，等待指令...');
     document.getElementById('btn').textContent='✓ 已连接';
-    SPD(0);curSpeed=0;
     clearInterval(keepTimer);
     keepTimer=setInterval(()=>send(curSpeed),1400);
-    poll();pollTimer=setInterval(poll,1500);
+    // 延迟3秒再开始轮询，避免拉到旧值
+    setTimeout(()=>{lastSent=-1;poll();pollTimer=setInterval(poll,1500);},3000);
   }catch(e){L('错误:'+e);}
 };
 </script></body></html>
