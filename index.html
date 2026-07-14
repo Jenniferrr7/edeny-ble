@@ -2,77 +2,61 @@
 <html><head><meta charset="utf-8"><title>Edeny</title>
 <meta name="viewport" content="width=device-width">
 <style>body{font:18px sans-serif;padding:20px;background:#111;color:#eee}
-button{display:block;width:100%;padding:14px;font-size:16px;margin:8px 0;border-radius:8px;border:none;background:#9b59b6;color:#fff;cursor:pointer}
-input[type=range]{width:100%;margin:12px 0}
+button{display:block;width:100%;padding:12px;font-size:16px;margin:8px 0;border-radius:8px;border:none;background:#9b59b6;color:#fff;cursor:pointer}
+input{width:100%;padding:10px;margin:6px 0;border-radius:8px;border:none;background:#222;color:#eee;font-size:14px;box-sizing:border-box}
 #status{font-size:14px;color:#aaa;margin:8px 0}
-#spd{font-size:48px;text-align:center;color:#c39bd3;margin:8px 0}</style></head>
+#spd{font-size:72px;text-align:center;color:#c39bd3;font-weight:bold;margin:16px 0}</style></head>
 <body>
 <h2>🔮 Edeny 远程控制</h2>
+<input type="password" id="tok" placeholder="粘贴 GitHub token">
 <button id="btn">连接 Edeny</button>
-<div id="spd">0</div>
-<div id="status">等待连接...</div>
-<div style="margin-top:20px;font-size:13px;color:#555">手动调整：</div>
-<input type="range" id="v" min="0" max="255" value="0">
-<button id="tog">手动开/停</button>
+<div id="spd">--</div>
+<div id="status">先填 token，再连接</div>
+<input type="range" id="v" min="0" max="255" value="0" style="margin:12px 0">
+<button id="tog" style="background:#555">手动模式</button>
 <script>
 let ch,keepTimer,pollTimer,manual=false,curSpeed=0;
 const L=t=>document.getElementById('status').textContent=t;
 const SPD=v=>document.getElementById('spd').textContent=v;
-
+const getK=()=>document.getElementById('tok').value.trim();
 async function send(v){
   if(!ch)return;
-  try{
-    const cmd=v>0?[0x55,0x04,0x00,0x00,0x01,v,0xAA]:[0x55,0x04,0x00,0x00,0x00,0x00,0xAA];
-    await ch.writeValueWithoutResponse(new Uint8Array(cmd));
-  }catch(e){L('写入错误: '+e);}
+  try{const c=v>0?[0x55,0x04,0x00,0x00,0x01,v,0xAA]:[0x55,0x04,0x00,0x00,0x00,0x00,0xAA];
+  await ch.writeValueWithoutResponse(new Uint8Array(c));}catch(e){}
 }
-
-function startKeepAlive(){
-  clearInterval(keepTimer);
-  keepTimer=setInterval(()=>send(curSpeed),1400);
-}
-
-// 轮询命令
 async function poll(){
   if(manual)return;
+  const k=getK();if(!k)return;
   try{
-    const r=await fetch('https://raw.githubusercontent.com/Jenniferrr7/edeny-ble/main/cmd.json?t='+Date.now(),
-      {cache:'no-store'});
+    const r=await fetch('https://api.github.com/repos/Jenniferrr7/edeny-ble/contents/cmd.json',
+      {headers:{'Authorization':'token '+k,'Accept':'application/vnd.github.v3.raw'},cache:'no-store'});
+    if(!r.ok)return;
     const d=await r.json();
-    if(d.speed!==curSpeed){
-      curSpeed=d.speed;
-      SPD(curSpeed);
-      send(curSpeed);
-      L(curSpeed>0?'远程控制中: '+curSpeed:'已停止');
-    }
-  }catch{}
+    const v=typeof d.speed==='number'?d.speed:0;
+    if(v!==curSpeed){curSpeed=v;SPD(v);send(v);L(v>0?'🔮 远程: '+v:'已停止');}
+  }catch(e){}
 }
-
-document.getElementById('v').oninput=e=>{
-  curSpeed=+e.target.value;
-  SPD(curSpeed);
-  if(manual)send(curSpeed);
-};
-
+document.getElementById('v').oninput=e=>{curSpeed=+e.target.value;SPD(curSpeed);if(manual)send(curSpeed);};
 document.getElementById('tog').onclick=()=>{
   manual=!manual;
-  document.getElementById('tog').textContent=manual?'切回远程':'手动开/停';
-  if(manual)send(curSpeed);
-  else{curSpeed=0;SPD(0);send(0);}
+  document.getElementById('tog').style.background=manual?'#c0392b':'#555';
+  document.getElementById('tog').textContent=manual?'切回远程':'手动模式';
+  if(!manual){curSpeed=0;SPD(0);send(0);}
 };
-
 document.getElementById('btn').onclick=async()=>{
+  if(!getK()){L('先填 token！');return;}
   try{
     const d=await navigator.bluetooth.requestDevice({acceptAllDevices:true,
       optionalServices:['0000ffe0-0000-1000-8000-00805f9b34fb']});
-    const srv=await d.gatt.connect();
-    const svc=await srv.getPrimaryService('0000ffe0-0000-1000-8000-00805f9b34fb');
+    const s=await d.gatt.connect();
+    const svc=await s.getPrimaryService('0000ffe0-0000-1000-8000-00805f9b34fb');
     ch=await svc.getCharacteristic('0000ffe1-0000-1000-8000-00805f9b34fb');
-    L('✓ 已连接: '+d.name);
+    L('✓ 已连接，等待指令...');
     document.getElementById('btn').textContent='✓ 已连接';
-    startKeepAlive();
-    poll();
-    pollTimer=setInterval(poll,2000);
-  }catch(e){L('错误: '+e);}
+    SPD(0);curSpeed=0;
+    clearInterval(keepTimer);
+    keepTimer=setInterval(()=>send(curSpeed),1400);
+    poll();pollTimer=setInterval(poll,1500);
+  }catch(e){L('错误:'+e);}
 };
 </script></body></html>
