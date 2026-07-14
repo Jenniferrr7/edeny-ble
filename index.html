@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>Edeny</title>
+<meta name="viewport" content="width=device-width">
+<style>body{font:18px sans-serif;padding:20px;background:#111;color:#eee}
+button{padding:12px 24px;font-size:18px;margin:8px;border-radius:8px;border:none;background:#9b59b6;color:#fff;cursor:pointer}
+input[type=range]{width:100%;margin:16px 0}
+#log{white-space:pre-wrap;font-size:14px;color:#aaa;margin-top:12px}</style></head>
+<body>
+<h2>🔮 Edeny 控制</h2>
+<button id="btn">连接</button>
+<div>震动强度 <span id="vv">0</span></div>
+<input type="range" id="v" min="0" max="20" value="0">
+<div id="log"></div>
+<script>
+let ch;
+const L=t=>document.getElementById('log').textContent+='\n'+t;
+document.getElementById('btn').onclick=async()=>{
+  try{
+    const d=await navigator.bluetooth.requestDevice({acceptAllDevices:true,
+      optionalServices:['0000fff0-0000-1000-8000-00805f9b34fb','0000fee7-0000-1000-8000-00805f9b34fb',
+      '6e400001-b5a3-f393-e0a9-e50e24dcca9e']});
+    const s=await d.gatt.connect();
+    L('已连接: '+d.name);
+    const svcs=await s.getPrimaryServices();
+    svcs.forEach(async s=>{
+      L('服务: '+s.uuid);
+      const cs=await s.getCharacteristics();
+      cs.forEach(c=>L('  特征: '+c.uuid+' props:'+JSON.stringify(c.properties)));
+      if(!ch&&(s.uuid.startsWith('0000fff')||s.uuid.startsWith('0000fee')||s.uuid.startsWith('6e4'))){
+        ch=cs.find(c=>c.properties.write||c.properties.writeWithoutResponse);
+      }
+    });
+  }catch(e){L('错误: '+e);}
+};
+document.getElementById('v').oninput=async e=>{
+  document.getElementById('vv').textContent=e.target.value;
+  if(!ch)return;
+  try{await ch.writeValue(new Uint8Array([0x55,0x04,+e.target.value,0x00,0x00,0xAA]));}
+  catch(e){L('写入错误: '+e);}
+};
+</script></body></html>
