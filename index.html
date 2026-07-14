@@ -3,35 +3,52 @@
 <meta name="viewport" content="width=device-width">
 <style>body{font:18px sans-serif;padding:20px;background:#111;color:#eee}
 button{display:block;width:100%;padding:14px;font-size:16px;margin:8px 0;border-radius:8px;border:none;background:#9b59b6;color:#fff;cursor:pointer}
-#log{white-space:pre-wrap;font-size:13px;color:#aaa;margin-top:12px}</style></head>
+button.on{background:#c0392b}
+input[type=range]{width:100%;margin:12px 0}
+#log{white-space:pre-wrap;font-size:12px;color:#aaa;margin-top:12px;max-height:200px;overflow-y:auto}</style></head>
 <body>
-<h2>🔮 Edeny 测试</h2>
-<button id="btn">1. 先连接</button>
-<hr>
-<button onclick="send([0x55,0x04,0x0A,0x00,0x00,0xAA])">格式A 震动</button>
-<button onclick="send([0x55,0x03,0x03,0x0A,0xAA])">格式B 震动</button>
-<button onclick="send([0x0A])">格式C 震动</button>
-<button onclick="send([0xF3,0x00,0x00,0x0A,0x00])">格式D 震动</button>
-<button onclick="send([0x55,0x09,0x03,0x0A,0x00,0xAA])">格式E 震动</button>
-<button onclick="send([0x55,0x04,0x00,0x00,0x00,0xAA])">停止</button>
-<div id="log"></div>
+<h2>🔮 Edeny 控制</h2>
+<button id="btn">连接</button>
+<div>强度 <span id="vv">0</span> / 255</div>
+<input type="range" id="v" min="0" max="255" value="0">
+<button id="tog">开始震动</button>
+<div id="log">等待连接...</div>
 <script>
-let ch;
-const L=t=>{document.getElementById('log').textContent+='\n'+t;};
-async function send(cmd){
-  if(!ch){L('未连接！先点连接');return;}
-  try{await ch.writeValueWithoutResponse(new Uint8Array(cmd));
-  L('发送: ['+cmd.map(b=>'0x'+b.toString(16).padStart(2,'0')).join(', ')+']');}
-  catch(e){L('错误: '+e);}
+let ch, timer, running=false, intensity=0;
+const L=t=>{const el=document.getElementById('log');el.textContent+='\n'+t;el.scrollTop=el.scrollHeight;};
+async function send(v){
+  if(!ch)return;
+  try{
+    const cmd=v>0
+      ?[0x55,0x04,0x00,0x00,0x01,v,0xAA]
+      :[0x55,0x04,0x00,0x00,0x00,0x00,0xAA];
+    await ch.writeValueWithoutResponse(new Uint8Array(cmd));
+  }catch(e){L('写入错误: '+e);}
 }
+function startKeepAlive(){
+  if(timer)clearInterval(timer);
+  timer=setInterval(()=>{if(running)send(intensity);},1500);
+}
+document.getElementById('v').oninput=e=>{
+  intensity=+e.target.value;
+  document.getElementById('vv').textContent=intensity;
+  if(running)send(intensity);
+};
+document.getElementById('tog').onclick=async()=>{
+  running=!running;
+  document.getElementById('tog').textContent=running?'停止':'开始震动';
+  document.getElementById('tog').className=running?'on':'';
+  if(running){send(intensity);startKeepAlive();}
+  else{clearInterval(timer);send(0);L('已停止');}
+};
 document.getElementById('btn').onclick=async()=>{
   try{
     const d=await navigator.bluetooth.requestDevice({acceptAllDevices:true,
-      optionalServices:['0000ae30-0000-1000-8000-00805f9b34fb']});
-    const s=await d.gatt.connect();
-    const svc=await s.getPrimaryService('0000ae30-0000-1000-8000-00805f9b34fb');
-    ch=await svc.getCharacteristic('0000ae01-0000-1000-8000-00805f9b34fb');
-    L('✓ 已连接: '+d.name+'\n可以开始测试了');
+      optionalServices:['0000ffe0-0000-1000-8000-00805f9b34fb']});
+    const srv=await d.gatt.connect();
+    const svc=await srv.getPrimaryService('0000ffe0-0000-1000-8000-00805f9b34fb');
+    ch=await svc.getCharacteristic('0000ffe1-0000-1000-8000-00805f9b34fb');
+    L('✓ 已连接: '+d.name+'\n调滑块，点"开始震动"');
     document.getElementById('btn').textContent='✓ 已连接';
   }catch(e){L('错误: '+e);}
 };
