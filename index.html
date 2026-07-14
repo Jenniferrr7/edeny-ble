@@ -2,47 +2,37 @@
 <html><head><meta charset="utf-8"><title>Edeny</title>
 <meta name="viewport" content="width=device-width">
 <style>body{font:18px sans-serif;padding:20px;background:#111;color:#eee}
-button{padding:12px 24px;font-size:18px;margin:8px;border-radius:8px;border:none;background:#9b59b6;color:#fff;cursor:pointer}
-input[type=range]{width:100%;margin:16px 0}#log{white-space:pre-wrap;font-size:13px;color:#aaa;margin-top:12px}</style></head>
+button{display:block;width:100%;padding:14px;font-size:16px;margin:8px 0;border-radius:8px;border:none;background:#9b59b6;color:#fff;cursor:pointer}
+#log{white-space:pre-wrap;font-size:13px;color:#aaa;margin-top:12px}</style></head>
 <body>
-<h2>🔮 Edeny 控制</h2>
-<button id="btn">连接</button>
-<div>震动强度 <span id="vv">0</span></div>
-<input type="range" id="v" min="0" max="20" value="0">
+<h2>🔮 Edeny 测试</h2>
+<button id="btn">1. 先连接</button>
+<hr>
+<button onclick="send([0x55,0x04,0x0A,0x00,0x00,0xAA])">格式A 震动</button>
+<button onclick="send([0x55,0x03,0x03,0x0A,0xAA])">格式B 震动</button>
+<button onclick="send([0x0A])">格式C 震动</button>
+<button onclick="send([0xF3,0x00,0x00,0x0A,0x00])">格式D 震动</button>
+<button onclick="send([0x55,0x09,0x03,0x0A,0x00,0xAA])">格式E 震动</button>
+<button onclick="send([0x55,0x04,0x00,0x00,0x00,0xAA])">停止</button>
 <div id="log"></div>
 <script>
 let ch;
-const L=t=>{document.getElementById('log').textContent+='\n'+t;console.log(t);};
+const L=t=>{document.getElementById('log').textContent+='\n'+t;};
+async function send(cmd){
+  if(!ch){L('未连接！先点连接');return;}
+  try{await ch.writeValueWithoutResponse(new Uint8Array(cmd));
+  L('发送: ['+cmd.map(b=>'0x'+b.toString(16).padStart(2,'0')).join(', ')+']');}
+  catch(e){L('错误: '+e);}
+}
 document.getElementById('btn').onclick=async()=>{
   try{
     const d=await navigator.bluetooth.requestDevice({acceptAllDevices:true,
-      optionalServices:[
-        '0000ae30-0000-1000-8000-00805f9b34fb',
-        '0000ae00-0000-1000-8000-00805f9b34fb',
-        '0000ffe0-0000-1000-8000-00805f9b34fb'
-      ]});
-    const srv=await d.gatt.connect();
-    L('已连接: '+d.name);
-    // 尝试 AE30 服务
-    try{
-      const s=await srv.getPrimaryService('0000ae30-0000-1000-8000-00805f9b34fb');
-      ch=await s.getCharacteristic('0000ae01-0000-1000-8000-00805f9b34fb');
-      L('✓ 使用服务 AE30');
-    }catch{
-      // 退回 FFE0 服务
-      const s=await srv.getPrimaryService('0000ffe0-0000-1000-8000-00805f9b34fb');
-      ch=await s.getCharacteristic('0000ffe1-0000-1000-8000-00805f9b34fb');
-      L('✓ 使用服务 FFE0');
-    }
+      optionalServices:['0000ae30-0000-1000-8000-00805f9b34fb']});
+    const s=await d.gatt.connect();
+    const svc=await s.getPrimaryService('0000ae30-0000-1000-8000-00805f9b34fb');
+    ch=await svc.getCharacteristic('0000ae01-0000-1000-8000-00805f9b34fb');
+    L('✓ 已连接: '+d.name+'\n可以开始测试了');
+    document.getElementById('btn').textContent='✓ 已连接';
   }catch(e){L('错误: '+e);}
-};
-document.getElementById('v').oninput=async e=>{
-  const v=+e.target.value;
-  document.getElementById('vv').textContent=v;
-  if(!ch)return;
-  try{
-    await ch.writeValueWithoutResponse(new Uint8Array([0x55,0x04,v,0x00,0x00,0xAA]));
-    L('震动 '+v);
-  }catch(err){L('写入错误: '+err);}
 };
 </script></body></html>
