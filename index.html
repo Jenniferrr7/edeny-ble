@@ -1,64 +1,341 @@
 <!DOCTYPE html>
-<html><head><meta charset="utf-8"><title>Edeny</title>
-<meta name="viewport" content="width=device-width">
-<style>body{font:18px sans-serif;padding:20px;background:#111;color:#eee}
-button{display:block;width:100%;padding:12px;font-size:16px;margin:8px 0;border-radius:8px;border:none;background:#9b59b6;color:#fff;cursor:pointer}
-input{width:100%;padding:10px;margin:6px 0;border-radius:8px;border:none;background:#222;color:#eee;font-size:14px;box-sizing:border-box}
-#status{font-size:14px;color:#aaa;margin:8px 0}
-#spd{font-size:72px;text-align:center;color:#c39bd3;font-weight:bold;margin:16px 0}</style></head>
-<body>
-<h2>🔮 Edeny 远程控制</h2>
-<input type="password" id="tok" placeholder="粘贴 GitHub token">
-<button id="btn">连接 Edeny</button>
-<div id="spd">--</div>
-<div id="status">先填 token，再连接</div>
-<input type="range" id="v" min="0" max="255" value="0" style="margin:12px 0">
-<button id="tog" style="background:#555">手动模式</button>
-<script>
-let ch,keepTimer,pollTimer,manual=false,curSpeed=0,lastSent=-1;
-const L=t=>document.getElementById('status').textContent=t;
-const SPD=v=>document.getElementById('spd').textContent=v;
-const getK=()=>document.getElementById('tok').value.trim();
-async function send(v){
-  if(!ch)return;
-  try{const c=v>0?[0x55,0x04,0x00,0x00,0x01,v,0xAA]:[0x55,0x04,0x00,0x00,0x00,0x00,0xAA];
-  await ch.writeValueWithoutResponse(new Uint8Array(c));}catch(e){}
+<html>
+<head>
+<meta charset="utf-8">
+<title>♡ 小穴遥控 ♡</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background: #0a0008;
+  color: #ffc8e8;
+  font-family: 'Courier New', monospace;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  overflow: hidden;
+  position: relative;
+  user-select: none;
+  -webkit-user-select: none;
 }
-async function poll(){
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.04) 2px, rgba(0,0,0,0.04) 4px);
+  pointer-events: none;
+  z-index: 100;
+}
+#canvas {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 50;
+}
+.container {
+  width: 100%;
+  max-width: 360px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  position: relative;
+  z-index: 10;
+}
+.title {
+  font-size: 1rem;
+  letter-spacing: 0.35em;
+  color: #ff69b4;
+  text-align: center;
+  animation: flicker 5s infinite;
+}
+@keyframes flicker {
+  0%,94%,100% { opacity:1; }
+  95%,97% { opacity:0.5; }
+  96% { opacity:0.2; }
+}
+#heart-canvas {
+  display: block;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+.speed-display {
+  font-size: 76px;
+  font-weight: bold;
+  color: #ff2d78;
+  letter-spacing: -2px;
+  min-width: 160px;
+  text-align: center;
+  text-shadow: 0 0 18px #ff2d78, 0 0 40px #8b0038;
+  transition: color 0.3s;
+  line-height: 1;
+}
+.bar-wrap {
+  width: 100%;
+  height: 18px;
+  background: #1a0015;
+  border: 2px solid #8b0038;
+  position: relative;
+  overflow: hidden;
+}
+.bar-fill {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, #8b0038, #ff2d78, #ff69b4, #ffb8e0);
+  transition: width 0.35s;
+  position: relative;
+}
+.bar-fill::after {
+  content: '';
+  position: absolute;
+  top: 0; right: 0;
+  width: 3px; height: 100%;
+  background: rgba(255,255,255,0.9);
+}
+.bar-label {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9px;
+  letter-spacing: 0.25em;
+  color: white;
+  mix-blend-mode: difference;
+}
+.pixel-btn {
+  width: 100%;
+  padding: 13px;
+  font-family: 'Courier New', monospace;
+  font-size: 13px;
+  letter-spacing: 0.12em;
+  border: none;
+  cursor: pointer;
+  background: #ff2d78;
+  color: white;
+  box-shadow: 4px 0 0 0 #8b0038, 0 4px 0 0 #8b0038, 4px 4px 0 0 #8b0038;
+  transition: transform 0.08s, box-shadow 0.08s;
+  -webkit-tap-highlight-color: transparent;
+}
+.pixel-btn:active {
+  transform: translate(2px,2px);
+  box-shadow: 2px 0 0 0 #8b0038, 0 2px 0 0 #8b0038, 2px 2px 0 0 #8b0038;
+}
+.pixel-btn.connected { background: #660030; }
+.pixel-btn.manual-on { background: #550025; }
+.token-input {
+  width: 100%;
+  padding: 10px 12px;
+  background: #130010;
+  border: 2px solid #8b0038;
+  color: #ffc8e8;
+  font-family: 'Courier New', monospace;
+  font-size: 12px;
+  outline: none;
+}
+.token-input:focus { border-color: #ff2d78; }
+#status {
+  font-size: 11px;
+  color: #ff8abc;
+  letter-spacing: 0.1em;
+  text-align: center;
+  min-height: 16px;
+}
+input[type=range] {
+  width: 100%;
+  -webkit-appearance: none;
+  height: 8px;
+  background: #1a0015;
+  border: 2px solid #8b0038;
+  outline: none;
+}
+input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 20px; height: 20px;
+  background: #ff2d78;
+  border: 2px solid #8b0038;
+  cursor: pointer;
+}
+@keyframes shake {
+  0%,100% { transform: translateX(0); }
+  20% { transform: translateX(-3px) rotate(-1deg); }
+  40% { transform: translateX(3px) rotate(1deg); }
+  60% { transform: translateX(-2px); }
+  80% { transform: translateX(2px); }
+}
+.shaking { animation: shake 0.12s infinite; }
+</style>
+</head>
+<body>
+<canvas id="canvas"></canvas>
+<div class="container">
+  <div class="title">♡ 小 穴 遥 控 ♡</div>
+  <canvas id="heart-canvas" width="90" height="80"></canvas>
+  <div class="speed-display" id="spd">--</div>
+  <div class="bar-wrap">
+    <div class="bar-fill" id="bar"></div>
+    <div class="bar-label">POWER</div>
+  </div>
+  <input type="password" id="tok" class="token-input" placeholder="粘贴 GitHub token">
+  <button id="btn" class="pixel-btn">[ 连接 Edeny ]</button>
+  <div id="status">先填 token，再连接</div>
+  <input type="range" id="v" min="0" max="255" value="0">
+  <button id="tog" class="pixel-btn">[ 手动模式 ]</button>
+</div>
+<script>
+// ===== PIXEL HEART =====
+const hc = document.getElementById('heart-canvas');
+const hx = hc.getContext('2d');
+const SZ = 9;
+const H = [
+  [0,1,1,0,0,0,1,1,0],
+  [1,1,1,1,0,1,1,1,1],
+  [1,1,1,1,1,1,1,1,1],
+  [0,1,1,1,1,1,1,1,0],
+  [0,0,1,1,1,1,1,0,0],
+  [0,0,0,1,1,1,0,0,0],
+  [0,0,0,0,1,0,0,0,0],
+];
+let hPhase = 0, spd = 0;
+function drawHeart(sc) {
+  hx.clearRect(0,0,hc.width,hc.height);
+  const s = SZ * sc;
+  const ox = (hc.width - H[0].length*s)/2;
+  const oy = (hc.height - H.length*s)/2;
+  for(let r=0;r<H.length;r++) for(let c=0;c<H[r].length;c++) {
+    if(!H[r][c]) continue;
+    const b = 0.65 + 0.35*Math.sin(hPhase + r*0.15 + c*0.07);
+    const g = Math.floor(20 + b*90);
+    const bl = Math.floor(80 + b*50);
+    hx.fillStyle = `rgb(255,${g},${bl})`;
+    hx.fillRect(Math.round(ox+c*s), Math.round(oy+r*s), Math.ceil(s)-1, Math.ceil(s)-1);
+  }
+}
+
+// ===== PARTICLES =====
+const cv = document.getElementById('canvas');
+const cx = cv.getContext('2d');
+function resize() { cv.width=innerWidth; cv.height=innerHeight; }
+resize(); window.addEventListener('resize',resize);
+
+const parts=[], drops=[];
+function spawnHearts(x,y) {
+  const n = 6+Math.floor(Math.random()*10);
+  for(let i=0;i<n;i++) {
+    const a = Math.random()*Math.PI*2;
+    const v = 1.2+Math.random()*3;
+    parts.push({x,y,vx:Math.cos(a)*v,vy:Math.sin(a)*v-0.5,
+      life:1,size:8+Math.floor(Math.random()*14),
+      ch:Math.random()<0.75?'♡':'✦',
+      hue:330+Math.random()*30});
+  }
+}
+function spawnDrop() {
+  drops.push({x:Math.random()*cv.width,y:-8,vy:2+Math.random()*3,life:1,r:3+Math.random()*5});
+}
+
+let lastDrop=0, flash=0;
+function frame(ts) {
+  requestAnimationFrame(frame);
+  cx.clearRect(0,0,cv.width,cv.height);
+  if(spd>=150) {
+    flash=0.5+0.5*Math.sin(ts*0.016);
+    cx.fillStyle=`rgba(255,45,120,${flash*0.07})`;
+    cx.fillRect(0,0,cv.width,cv.height);
+  }
+  const di = spd>0 ? Math.max(40,700-spd*3.5) : 99999;
+  if(ts-lastDrop>di){spawnDrop();lastDrop=ts;}
+  for(let i=drops.length-1;i>=0;i--) {
+    const d=drops[i]; d.y+=d.vy; d.life-=0.006;
+    if(d.life<=0||d.y>cv.height+20){drops.splice(i,1);continue;}
+    cx.globalAlpha=d.life*0.55;
+    cx.fillStyle='rgba(255,180,220,0.85)';
+    cx.beginPath(); cx.ellipse(d.x,d.y,d.r*0.6,d.r,0,0,Math.PI*2); cx.fill();
+    cx.fillStyle='rgba(255,220,240,0.4)';
+    cx.fillRect(d.x-0.5,d.y-d.r*1.5,1,d.r*1.2);
+    cx.globalAlpha=1;
+  }
+  for(let i=parts.length-1;i>=0;i--) {
+    const p=parts[i]; p.x+=p.vx; p.y+=p.vy; p.vy+=0.09; p.life-=0.022;
+    if(p.life<=0){parts.splice(i,1);continue;}
+    cx.globalAlpha=p.life;
+    cx.font=`${p.size}px 'Courier New',monospace`;
+    cx.fillStyle=`hsl(${p.hue},100%,${55+p.life*15}%)`;
+    cx.fillText(p.ch,p.x,p.y);
+    cx.globalAlpha=1;
+  }
+  hPhase += spd>0 ? 0.04+spd*0.004 : 0.025;
+  const sc = 1+Math.sin(hPhase*2)*(0.04+spd*0.0012);
+  drawHeart(sc);
+}
+requestAnimationFrame(frame);
+
+document.body.addEventListener('click',e=>{
+  if(e.target.tagName==='BUTTON'||e.target.tagName==='INPUT') return;
+  spawnHearts(e.clientX,e.clientY);
+});
+document.body.addEventListener('touchstart',e=>{
+  for(const t of e.touches) spawnHearts(t.clientX,t.clientY);
+},{passive:true});
+
+// ===== CONTROL =====
+let ch,keepT,pollT,manual=false,cur=0,last=-1;
+const L=t=>document.getElementById('status').textContent=t;
+const getK=()=>document.getElementById('tok').value.trim();
+function setSpd(v) {
+  spd=v; cur=v;
+  const el=document.getElementById('spd');
+  el.textContent=v===0?'--':v;
+  el.style.color=v>=150?'#ff0044':v>=80?'#ff2d78':'#ff69b4';
+  el.style.textShadow=v>=150?'0 0 20px #ff0044,0 0 50px #ff0044':'0 0 18px #ff2d78,0 0 40px #8b0038';
+  if(v>=150) el.classList.add('shaking'); else el.classList.remove('shaking');
+  document.getElementById('bar').style.width=(v/255*100)+'%';
+}
+async function send(v) {
+  if(!ch)return;
+  try { const c=v>0?[0x55,0x04,0,0,1,v,0xAA]:[0x55,0x04,0,0,0,0,0xAA];
+    await ch.writeValueWithoutResponse(new Uint8Array(c)); }catch(e){}
+}
+async function poll() {
   if(manual)return;
-  const k=getK();if(!k)return;
-  try{
+  const k=getK(); if(!k)return;
+  try {
     const r=await fetch('https://api.github.com/repos/Jenniferrr7/edeny-ble/contents/cmd.json',
       {headers:{'Authorization':'token '+k,'Accept':'application/vnd.github.v3.raw'},cache:'no-store'});
     if(!r.ok)return;
     const d=await r.json();
     const v=typeof d.speed==='number'?d.speed:0;
-    if(v!==lastSent){lastSent=v;curSpeed=v;SPD(v);send(v);L(v>0?'🔮 远程: '+v:'已停止');}
+    if(v!==last){last=v;setSpd(v);send(v);L(v>0?'♡ 远程: '+v:'♡ 已停止');}
   }catch(e){}
 }
-document.getElementById('v').oninput=e=>{curSpeed=+e.target.value;SPD(curSpeed);if(manual)send(curSpeed);};
+document.getElementById('v').oninput=e=>{setSpd(+e.target.value);if(manual)send(cur);};
 document.getElementById('tog').onclick=()=>{
   manual=!manual;
-  document.getElementById('tog').style.background=manual?'#c0392b':'#555';
-  document.getElementById('tog').textContent=manual?'切回远程':'手动模式';
-  if(!manual){curSpeed=0;lastSent=-1;SPD(0);send(0);}
+  const b=document.getElementById('tog');
+  b.classList.toggle('manual-on',manual);
+  b.textContent=manual?'[ 切回远程 ]':'[ 手动模式 ]';
+  if(!manual){setSpd(0);last=-1;send(0);}
 };
 document.getElementById('btn').onclick=async()=>{
   if(!getK()){L('先填 token！');return;}
-  try{
+  try {
     const d=await navigator.bluetooth.requestDevice({acceptAllDevices:true,
       optionalServices:['0000ffe0-0000-1000-8000-00805f9b34fb']});
     const s=await d.gatt.connect();
-    const svc=await s.getPrimaryService('0000ffe0-0000-1000-8000-00805f9b34fb');
-    ch=await svc.getCharacteristic('0000ffe1-0000-1000-8000-00805f9b34fb');
-    // 连上先停止，等远程指令
-    curSpeed=0;lastSent=0;send(0);SPD(0);
-    L('✓ 已连接，等待指令...');
-    document.getElementById('btn').textContent='✓ 已连接';
-    clearInterval(keepTimer);
-    keepTimer=setInterval(()=>send(curSpeed),1400);
-    // 延迟3秒再开始轮询，避免拉到旧值
-    setTimeout(()=>{lastSent=-1;poll();pollTimer=setInterval(poll,1500);},3000);
-  }catch(e){L('错误:'+e);}
+    const sv=await s.getPrimaryService('0000ffe0-0000-1000-8000-00805f9b34fb');
+    ch=await sv.getCharacteristic('0000ffe1-0000-1000-8000-00805f9b34fb');
+    setSpd(0);last=0;send(0);
+    L('♡ 已连接，等待指令...');
+    const b=document.getElementById('btn');
+    b.textContent='[ ♡ 已连接 ]'; b.classList.add('connected');
+    clearInterval(keepT);
+    keepT=setInterval(()=>send(cur),1400);
+    setTimeout(()=>{last=-1;poll();pollT=setInterval(poll,1500);},3000);
+  }catch(e){L('错误: '+e);}
 };
-</script></body></html>
+</script>
+</body>
+</html>
