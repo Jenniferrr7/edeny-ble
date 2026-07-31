@@ -671,7 +671,7 @@ async function poll() {
     );
     if (!r.ok) return;
     const d = await r.json();
-    const v = typeof d.speed === 'number' ? d.speed : 0;
+    const v = typeof d.level === 'number' ? d.level : 0;
     if (v !== last) { last = v; setSpd(v); send(v); L(v > 0 ? '♡ 远程  ' + v : '♡ 归于宁静'); }
   } catch(_) {}
 }
