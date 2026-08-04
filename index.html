@@ -669,11 +669,19 @@ async function poll() {
       'https://api.github.com/repos/Jenniferrr7/edeny-ble/contents/cmd.json',
       { headers: { 'Authorization': 'token ' + k, 'Accept': 'application/vnd.github.v3.raw' }, cache: 'no-store' }
     );
-    if (!r.ok) return;
+    if (!r.ok) { L('错误 ' + r.status); return; }
     const d = await r.json();
-    const v = typeof d.level === 'number' ? d.level : 0;
+    let v = 0;
+    if (typeof d.level === 'number') {
+      v = d.level;
+    } else if (typeof d.content === 'string') {
+      try {
+        const raw = JSON.parse(atob(d.content.replace(/\s/g, '')));
+        if (typeof raw.level === 'number') v = raw.level;
+      } catch(_) {}
+    }
     if (v !== last) { last = v; setSpd(v); send(v); L(v > 0 ? '♡ 远程  ' + v : '♡ 归于宁静'); }
-  } catch(_) {}
+  } catch(e) { L('err: ' + e.message); }
 }
 
 document.getElementById('tog').onclick = () => {
