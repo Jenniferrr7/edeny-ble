@@ -7,9 +7,39 @@
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
+:root {
+  --bg:        #f7f2f1;
+  --ink:       #5d5054;
+  --ink-soft:  rgba(93,80,84,0.46);
+  --ink-faint: rgba(93,80,84,0.26);
+  --line:      rgba(93,80,84,0.10);
+  --field:     rgba(255,255,255,0.62);
+  --field-br:  rgba(93,80,84,0.13);
+  --rose:      #c98fa8;
+  --rose-deep: #a86b8a;
+  --rose-soft: rgba(201,143,168,0.30);
+  --btn-ink:   #ffffff;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg:        #1b1519;
+    --ink:       rgba(246,238,241,0.86);
+    --ink-soft:  rgba(246,238,241,0.40);
+    --ink-faint: rgba(246,238,241,0.20);
+    --line:      rgba(246,238,241,0.09);
+    --field:     rgba(255,255,255,0.05);
+    --field-br:  rgba(246,238,241,0.11);
+    --rose:      #d79bb4;
+    --rose-deep: #b87d9c;
+    --rose-soft: rgba(215,155,180,0.28);
+    --btn-ink:   #2a1f26;
+  }
+}
+
 body {
-  background: #05050a;
-  color: rgba(255,255,255,0.82);
+  background: var(--bg);
+  color: var(--ink);
   font-family: 'Palatino Linotype', Palatino, 'Book Antiqua', Georgia, serif;
   min-height: 100vh;
   display: flex;
@@ -67,21 +97,21 @@ body {
 .thermo-lbl {
   font-size: 8px;
   letter-spacing: 0.18em;
-  color: rgba(255,255,255,0.18);
+  color: var(--ink-faint);
   font-style: italic;
   margin-bottom: 5px;
 }
 .thermo-lbl-b {
   font-size: 8px;
   letter-spacing: 0.18em;
-  color: rgba(255,255,255,0.18);
+  color: var(--ink-faint);
   font-style: italic;
   margin-top: 5px;
 }
 .thermo-track {
   width: 3px;
   flex: 1;
-  background: rgba(255,255,255,0.07);
+  background: var(--line);
   border-radius: 2px;
   position: relative;
   cursor: ns-resize;
@@ -91,7 +121,7 @@ body {
   position: absolute;
   bottom: 0; left: 0; right: 0;
   height: 0%;
-  background: linear-gradient(to top, rgba(120,8,22,0.9), rgba(220,55,75,1));
+  background: linear-gradient(to top, var(--rose-soft), var(--rose));
   border-radius: 2px;
 }
 .thermo-thumb {
@@ -100,9 +130,9 @@ body {
   transform: translate(-50%, 50%);
   width: 11px; height: 11px;
   border-radius: 50%;
-  background: rgba(220,55,75,1);
+  background: var(--rose);
   bottom: 0%;
-  box-shadow: 0 0 8px rgba(220,55,75,0.7);
+  box-shadow: 0 0 10px var(--rose-soft);
 }
 
 /* ── STATE ── */
@@ -116,7 +146,7 @@ body {
   font-weight: normal;
   font-style: italic;
   letter-spacing: 0.18em;
-  color: rgba(255,255,255,0.88);
+  color: var(--ink);
   line-height: 1;
   transition: text-shadow 1.2s;
   text-indent: 0.18em;
@@ -124,7 +154,7 @@ body {
 .state-msg {
   font-size: 12px;
   letter-spacing: 0.38em;
-  color: rgba(255,255,255,0.25);
+  color: var(--ink-soft);
   min-height: 20px;
   font-style: italic;
   margin-top: 9px;
@@ -132,10 +162,10 @@ body {
 .cursor {
   display: inline-block;
   width: 1px; height: 10px;
-  background: rgba(255,255,255,0.3);
+  background: var(--ink-soft);
   vertical-align: middle;
   margin-left: 1px;
-  animation: blink 1.1s infinite;
+  animation: blink var(--blink, 1.1s) infinite;
 }
 @keyframes blink { 0%,49%{opacity:1} 50%,100%{opacity:0} }
 
@@ -143,7 +173,7 @@ body {
 .line {
   height: 1px;
   margin: 6px 28px;
-  background: rgba(255,255,255,0.055);
+  background: var(--line);
   flex-shrink: 0;
 }
 
@@ -156,26 +186,29 @@ body {
   display: block;
   font-size: 9px;
   letter-spacing: 0.42em;
-  color: rgba(255,255,255,0.18);
+  color: var(--ink-faint);
   text-transform: uppercase;
   margin-bottom: 6px;
 }
 .token-input {
   width: 100%;
   padding: 11px 14px;
-  background: rgba(255,255,255,0.038);
-  border: 1px solid rgba(255,255,255,0.07);
-  border-radius: 1px;
-  color: rgba(255,255,255,0.72);
+  background: var(--field);
+  border: 1px solid var(--field-br);
+  border-radius: 10px;
+  color: var(--ink);
   font-family: 'Courier New', monospace;
   font-size: 12px;
   outline: none;
   letter-spacing: 0.06em;
   margin-bottom: 10px;
-  transition: border-color 0.3s;
+  transition: border-color 0.3s, box-shadow 0.3s;
 }
-.token-input:focus { border-color: rgba(200,40,60,0.45); }
-.token-input::placeholder { color: rgba(255,255,255,0.16); }
+.token-input:focus {
+  border-color: var(--rose);
+  box-shadow: 0 0 0 3px var(--rose-soft);
+}
+.token-input::placeholder { color: var(--ink-faint); }
 .btn {
   width: 100%;
   padding: 14px;
@@ -185,36 +218,38 @@ body {
   letter-spacing: 0.42em;
   cursor: pointer;
   border: none;
-  border-radius: 1px;
+  border-radius: 12px;
   margin-bottom: 8px;
   text-indent: 0.42em;
-  transition: opacity 0.15s, background 0.4s;
+  transition: opacity 0.15s, background 0.4s, box-shadow 0.4s;
 }
 .btn-main {
-  background: rgba(175,18,38,0.88);
-  color: rgba(255,255,255,0.9);
+  background: var(--rose);
+  color: var(--btn-ink);
+  box-shadow: 0 2px 12px var(--rose-soft);
 }
-.btn-main:active { opacity: 0.75; }
+.btn-main:active { opacity: 0.78; }
 .btn-main.dim {
-  background: rgba(70,6,14,0.5);
-  color: rgba(255,255,255,0.22);
+  background: var(--rose-soft);
+  color: var(--ink-soft);
+  box-shadow: none;
   cursor: default;
 }
 .btn-outline {
   background: transparent;
-  color: rgba(255,255,255,0.28);
-  border: 1px solid rgba(255,255,255,0.09);
+  color: var(--ink-soft);
+  border: 1px solid var(--field-br);
 }
 .btn-outline:active { opacity: 0.7; }
 .btn-outline.active {
-  color: rgba(200,50,68,0.8);
-  border-color: rgba(200,50,68,0.28);
+  color: var(--rose-deep);
+  border-color: var(--rose-soft);
 }
 #status {
   text-align: center;
   font-size: 10px;
   letter-spacing: 0.22em;
-  color: rgba(255,255,255,0.18);
+  color: var(--ink-faint);
   font-style: italic;
   min-height: 18px;
   margin-top: 4px;
@@ -255,6 +290,29 @@ body {
 </div>
 
 <script>
+// ── PALETTE ──────────────────────────────────────────────
+const DARK = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+
+// 池心：低强度 → 高强度
+const POOL_IN  = DARK ? [[52,40,48],  [196,124,158]] : [[238,226,228], [212,138,166]];
+// 池缘：低强度 → 高强度
+const POOL_OUT = DARK ? [[34,26,32],  [140,84,112]]  : [[246,238,238], [190,112,146]];
+// 涟漪 / 水滴 / 描边
+const ACCENT   = DARK ? [[150,104,128],[222,158,186]] : [[206,158,178], [178,102,140]];
+// 外光晕
+const HALO     = DARK ? [214,150,178] : [226,170,192];
+// 高光点
+const SHEEN    = DARK ? [255,236,244] : [255,252,253];
+
+function mix(pair, t) {
+  const [a, b] = pair;
+  return [
+    Math.round(a[0] + (b[0]-a[0]) * t),
+    Math.round(a[1] + (b[1]-a[1]) * t),
+    Math.round(a[2] + (b[2]-a[2]) * t),
+  ];
+}
+
 // ── CANVAS SETUP ─────────────────────────────────────────
 const canvas = document.getElementById('liquid-canvas');
 const ctx = canvas.getContext('2d');
@@ -266,7 +324,7 @@ function resize() {
   W = w; H = h;
   canvas.width = w * dpr;
   canvas.height = h * dpr;
-  ctx.scale(dpr, dpr);
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   CX = w / 2; CY = h / 2;
   poolR = Math.min(w, h) * 0.34;
 }
@@ -284,12 +342,12 @@ class Ripple {
   }
   tick() { this.r += this.speed; if (this.r >= this.maxR) this.dead = true; }
   draw(t) {
-    const a = Math.max(0, (1 - this.r / this.maxR) * 0.7);
-    const rr = Math.floor(180 + t * 60), gg = Math.floor(20 + t * 15), bb = Math.floor(38 + t * 22);
+    const a = Math.max(0, (1 - this.r / this.maxR) * 0.62);
+    const [rr,gg,bb] = mix(ACCENT, t);
     ctx.beginPath();
     ctx.arc(this.x, this.y, this.r, 0, Math.PI * 2);
     ctx.strokeStyle = `rgba(${rr},${gg},${bb},${a})`;
-    ctx.lineWidth = 1.2 + t * 0.8;
+    ctx.lineWidth = 1.1 + t * 0.7;
     ctx.stroke();
   }
 }
@@ -301,11 +359,11 @@ class Drop {
     this.x = x; this.y = y;
     this.vx = Math.cos(ang) * spd;
     this.vy = Math.sin(ang) * spd - 2 - Math.random() * 2.5;
-    this.r = 1.5 + Math.random() * 2.5; this.a = 0.9; this.dead = false;
+    this.r = 1.5 + Math.random() * 2.5; this.a = 0.85; this.dead = false;
   }
   tick() { this.vy += 0.2; this.x += this.vx; this.y += this.vy; this.a -= 0.024; if (this.a <= 0) this.dead = true; }
   draw(t) {
-    const rr = Math.floor(200 + t * 55), gg = Math.floor(28 + t * 18), bb = Math.floor(48 + t * 28);
+    const [rr,gg,bb] = mix(ACCENT, t);
     ctx.beginPath();
     ctx.arc(this.x, this.y, this.r, 0, Math.PI * 2);
     ctx.fillStyle = `rgba(${rr},${gg},${bb},${this.a})`;
@@ -330,9 +388,9 @@ function frame() {
   if (t > 0.02) {
     const gr = poolR * (1.4 + t * 2.2);
     const grd = ctx.createRadialGradient(CX, CY, 0, CX, CY, gr);
-    grd.addColorStop(0, `rgba(155,10,28,${t * 0.16})`);
-    grd.addColorStop(0.55, `rgba(90,4,16,${t * 0.07})`);
-    grd.addColorStop(1, `rgba(0,0,0,0)`);
+    grd.addColorStop(0,    `rgba(${HALO[0]},${HALO[1]},${HALO[2]},${t * 0.22})`);
+    grd.addColorStop(0.55, `rgba(${HALO[0]},${HALO[1]},${HALO[2]},${t * 0.09})`);
+    grd.addColorStop(1,    `rgba(${HALO[0]},${HALO[1]},${HALO[2]},0)`);
     ctx.beginPath(); ctx.arc(CX, CY, gr, 0, Math.PI * 2);
     ctx.fillStyle = grd; ctx.fill();
   }
@@ -340,19 +398,20 @@ function frame() {
   // pool
   const breathe = 1 + 0.022 * Math.sin(breath) * (1 - t * 0.55);
   const r = poolR * breathe;
-  const c1r = Math.floor(22 + t * 95), c1g = Math.floor(4 + t * 3), c1b = Math.floor(30 - t * 5);
-  const c2r = Math.floor(8 + t * 48), c2g = Math.floor(2 + t * 2), c2b = Math.floor(14);
+  const cIn  = mix(POOL_IN,  t);
+  const cOut = mix(POOL_OUT, t);
   const pg = ctx.createRadialGradient(CX - r * 0.14, CY - r * 0.18, r * 0.04, CX, CY, r);
-  pg.addColorStop(0, `rgb(${c1r},${c1g},${c1b})`);
-  pg.addColorStop(1, `rgb(${c2r},${c2g},${c2b})`);
+  pg.addColorStop(0, `rgb(${cIn[0]},${cIn[1]},${cIn[2]})`);
+  pg.addColorStop(1, `rgb(${cOut[0]},${cOut[1]},${cOut[2]})`);
   ctx.beginPath(); ctx.arc(CX, CY, r, 0, Math.PI * 2);
   ctx.fillStyle = pg; ctx.fill();
 
   // rim
-  const rimA = 0.12 + t * 0.58;
+  const rimA = 0.16 + t * 0.5;
+  const cRim = mix(ACCENT, t);
   ctx.beginPath(); ctx.arc(CX, CY, r, 0, Math.PI * 2);
-  ctx.strokeStyle = `rgba(${Math.floor(185+t*70)},${Math.floor(18+t*22)},${Math.floor(36+t*28)},${rimA})`;
-  ctx.lineWidth = 1.5 + t * 2.5; ctx.stroke();
+  ctx.strokeStyle = `rgba(${cRim[0]},${cRim[1]},${cRim[2]},${rimA})`;
+  ctx.lineWidth = 1.4 + t * 2.2; ctx.stroke();
 
   // shimmer
   for (let i = 0; i < 3; i++) {
@@ -360,7 +419,7 @@ function frame() {
     const sx = CX + Math.cos(ang) * r * (0.22 + i * 0.11);
     const sy = CY + Math.sin(ang * 1.28) * r * (0.14 + i * 0.07);
     ctx.beginPath(); ctx.arc(sx, sy, (3 + i * 2) * breathe, 0, Math.PI * 2);
-    ctx.fillStyle = `rgba(255,195,205,${0.038 + i * 0.018})`; ctx.fill();
+    ctx.fillStyle = `rgba(${SHEEN[0]},${SHEEN[1]},${SHEEN[2]},${0.34 + i * 0.09})`; ctx.fill();
   }
 
   // ripple emitter
@@ -382,27 +441,28 @@ function frame() {
   // overflow corona
   if (t > 0.82) {
     const ov = (t - 0.82) / 0.18;
+    const cOv = mix(ACCENT, 1);
     ctx.beginPath(); ctx.arc(CX, CY, r * (1 + ov * 0.09), 0, Math.PI * 2);
-    ctx.strokeStyle = `rgba(225,45,65,${ov * 0.45})`; ctx.lineWidth = 3 + ov * 5; ctx.stroke();
+    ctx.strokeStyle = `rgba(${cOv[0]},${cOv[1]},${cOv[2]},${ov * 0.42})`; ctx.lineWidth = 3 + ov * 5; ctx.stroke();
   }
 }
 frame();
 
 // bg heat glow
 function setBgHeat(t) {
-  const a = t * 0.28;
+  const a = t * 0.30;
   document.getElementById('bg-heat').style.background =
-    `radial-gradient(ellipse 72% 55% at 50% 38%, rgba(138,8,26,${a}) 0%, rgba(78,3,14,${a*.38}) 50%, rgba(0,0,0,0) 100%)`;
+    `radial-gradient(ellipse 72% 55% at 50% 38%, rgba(${HALO[0]},${HALO[1]},${HALO[2]},${a}) 0%, rgba(${HALO[0]},${HALO[1]},${HALO[2]},${a*.36}) 50%, rgba(0,0,0,0) 100%)`;
 }
 
 // ── STATES ───────────────────────────────────────────────
 const STATES = [
-  { at:   0, label: '静',   msgs: ['...', '风平浪静'] },
-  { at:  20, label: '初动', msgs: ['有所感', '轻轻地', '窸窣'] },
-  { at:  70, label: '渐燃', msgs: ['止不住了', '继续吗', '蔓延开了'] },
-  { at: 115, label: '难禁', msgs: ['陷进去了', '身不由己', '深一点'] },
-  { at: 155, label: '失控', msgs: ['别停', '越陷越深', '挡不住了'] },
-  { at: 205, label: '溢',   msgs: ['溢出来了', '全然沉沦', '挡不住了'] },
+  { at:   0, label: '静',   msgs: ['...', '风平浪静', '还没开始', '等着'] },
+  { at:  20, label: '初动', msgs: ['有所感', '轻轻地', '窸窣', '醒了', '有点痒'] },
+  { at:  70, label: '渐燃', msgs: ['止不住了', '继续吗', '蔓延开了', '腿软了', '想合上腿', '烫'] },
+  { at: 115, label: '难禁', msgs: ['陷进去了', '身不由己', '深一点', '受不住了', '手在抖', '咬着牙'] },
+  { at: 155, label: '失控', msgs: ['别停', '越陷越深', '挡不住了', '要去了', '腰塌了', '忍不住叫了'] },
+  { at: 205, label: '溢',   msgs: ['溢出来了', '全然沉沦', '一波接一波', '止不住地流', '化了', '全给你了'] },
 ];
 
 function getState(v) {
@@ -420,7 +480,14 @@ function typeWrite(text) {
   el.innerHTML = '<span class="cursor"></span>';
   let i = 0;
   (function step() {
-    if (i < text.length) { el.innerHTML = text.slice(0,++i) + '<span class="cursor"></span>'; typeT = setTimeout(step, 68 + Math.random()*48); }
+    if (i >= text.length) return;
+    const t = intensitySmooth;
+    // 低档慢而匀，高档快而碎
+    let d = (98 - t * 66) + Math.random() * (46 - t * 32);
+    // 越往上越容易卡住一下，像喘不上气
+    if (t > 0.5 && Math.random() < 0.10 + t * 0.14) d += 150 + Math.random() * 260;
+    el.innerHTML = text.slice(0,++i) + '<span class="cursor"></span>';
+    typeT = setTimeout(step, d);
   })();
 }
 
@@ -431,7 +498,8 @@ function cycleMsgs(st) {
   (function next() {
     if (getState(cur) !== st) return;
     typeWrite(st.msgs[mi++ % st.msgs.length]);
-    cycleT = setTimeout(next, 4400 + Math.random()*2000);
+    const t = intensitySmooth;
+    cycleT = setTimeout(next, (4600 - t*2900) + Math.random()*(2000 - t*1300));
   })();
 }
 
@@ -440,7 +508,10 @@ function updateDisplay(v) {
   updateThermo(v);
   const lbl = document.getElementById('state-label');
   const t = v / 255;
-  lbl.style.textShadow = `0 0 ${t*32}px rgba(220,48,68,${t*.82})`;
+  const [gr,gg,gb] = mix(ACCENT, t);
+  lbl.style.textShadow = `0 0 ${t*30}px rgba(${gr},${gg},${gb},${t*.8})`;
+  // 光标越往上闪得越急
+  document.documentElement.style.setProperty('--blink', (1.15 - t * 0.72).toFixed(2) + 's');
   const s = getState(v);
   lbl.textContent = s.label;
   if (s !== lastSt) { lastSt = s; typeWrite(s.msgs[0]); if (v > 0) cycleMsgs(s); }
