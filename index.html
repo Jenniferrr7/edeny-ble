@@ -549,6 +549,7 @@ thermoTrack.addEventListener('touchend',   () => { dragging = false; });
 
 // ── 控制核心 ─────────────────────────────────────────────
 let ch, dev, keepT, pollT, manual = false, cur = 0, last = -1, base = 0, held = false, remote = {}, lastSay = '';
+let lastOk = 0;   // 上一次成功读到远程指令的时间，用来做失联保险
 const L = t => $('status').textContent = t;
 const getK = () => $('tok').value.trim();
 function setSpd(v) { cur = v; updateDisplay(v); }
@@ -694,6 +695,11 @@ setInterval(() => {
   const dt = 0.25;
   if (game && !held) { game.tick(dt); compute(); }
   if (game) $('gpanel').innerHTML = game.panel();
+  // 失联保险：远程模式下超过 20 秒没读到指令，就归零
+  if (!manual && !held && ch && lastOk && base > 0 && Date.now() - lastOk > 20000) {
+    base = 0; last = -1; if (game && game.by === 'remote') stopGame();
+    compute(); L('失联超过 20 秒，已归零'); evt('watchdog');
+  }
   if (card && !held) { card.t += dt; if (card.t >= card.dur) { card = null; say('好了。'); renderGames(); } renderCard(); }
 }, 250);
 
@@ -728,13 +734,18 @@ async function poll() {
     if (typeof d.level !== 'number' && typeof d.content === 'string') {
       try { c = JSON.parse(decodeURIComponent(escape(atob(d.content.replace(/\s/g,''))))); } catch(_) { c = {}; }
     }
+    lastOk = Date.now();
     applyRemote(c);
   } catch(e) { L('err: '+e.message); }
 }
 function applyRemote(c) {
   remote = c || {};
-  const v = typeof remote.level === 'number' ? remote.level : 0;
-  const want = typeof remote.game === 'string' && remote.game ? remote.game : null;
+  // 到点自动归零：指令里写了 until（ISO 时间），过了就当没有
+  const exp = remote.until ? Date.parse(remote.until) : 0;
+  const expired = !!exp && Date.now() > exp;
+  const v = !expired && typeof remote.level === 'number' ? remote.level : 0;
+  const want = !expired && typeof remote.game === 'string' && remote.game ? remote.game : null;
+  if (expired && last !== 0) { evt('expired'); say('时间到。', 8000); }
   if (want && !(game && game.by === 'remote' && game.name === want)) startGame(want, 'remote', remote.params || {});
   else if (!want && game && game.by === 'remote') stopGame();
   if (typeof remote.say === 'string' && remote.say && remote.say !== lastSay) { lastSay = remote.say; say(remote.say, 30000); evt('say', { text: remote.say }); }
